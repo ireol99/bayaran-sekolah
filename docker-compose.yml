@@ -20,10 +20,21 @@ services:
     restart: always
     environment:
       - DATABASE_URL=postgres://admin_bayaran:rahasia123@db:5432/bayaran_db
+      - REDIS_URL=redis://redis:6379
       - NODE_ENV=production
       # JWT_SECRET=ganti_dengan_secret_yang_sangat_kuat
     depends_on:
       - db
+      - redis
+    networks:
+      - bayaran-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: bayaran-redis
+    restart: always
+    volumes:
+      - redis_data:/data
     networks:
       - bayaran-network
 
@@ -56,6 +67,7 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  redis_data:
 
 networks:
   bayaran-network:

@@ -31,6 +31,11 @@ export const redis = new Redis(redisUrl, {
   lazyConnect: true,
 });
 
+// Tangkap event error untuk mencegah crash "Unhandled error event"
+redis.on('error', (err) => {
+  // Logger pasif untuk menampung error koneksi agar ioredis tidak melempar Unhandled Error
+});
+
 // Coba koneksi ke Redis secara async (non-blocking)
 redis.connect().catch((err) => {
   console.warn('⚠️ Redis connection notice:', err.message || 'Redis is offline. Cashier & WhatsApp queue will fallback to in-memory mode.');
