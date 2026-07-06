@@ -2,7 +2,7 @@
 # Contoh: bayaran.sekolah.sch.id
 domain-anda.com {
     # Rute ke API Backend
-    handle_path /api/* {
+    handle /api/* {
         reverse_proxy backend:3000
     }
 
