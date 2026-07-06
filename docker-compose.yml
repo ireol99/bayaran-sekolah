@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: bayaran-db
+    restart: always
+    environment:
+      POSTGRES_USER: admin_bayaran
+      POSTGRES_PASSWORD: rahasia123
+      POSTGRES_DB: bayaran_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - bayaran-network
+
+  backend:
+    build: ./backend
+    container_name: bayaran-backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgres://admin_bayaran:rahasia123@db:5432/bayaran_db
+      - NODE_ENV=production
+      # JWT_SECRET=ganti_dengan_secret_yang_sangat_kuat
+    depends_on:
+      - db
+    networks:
+      - bayaran-network
+
+  frontend:
+    build: ./frontend
+    container_name: bayaran-frontend
+    restart: always
+    networks:
+      - bayaran-network
+
+  # Caddy acts as a Reverse Proxy and handles Automatic SSL (HTTPS)
+  caddy:
+    image: caddy:2-alpine
+    container_name: bayaran-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - bayaran-network
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  bayaran-network:
+    driver: bridge

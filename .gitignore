@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.log
+database_backup.sql
+*.jsonl
+.DS_Store
+temp-*.ts

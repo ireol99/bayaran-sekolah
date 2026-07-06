@@ -1,0 +1,40 @@
+/* AppShell Styles */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-bg-primary);
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Prevents flex children from breaking parent layout */
+  padding-left: var(--sidebar-width);
+  transition: padding-left var(--transition-normal);
+}
+
+/* Sidebar collapsed state adjustment */
+.sidebar-collapsed + .main-content {
+  padding-left: var(--sidebar-collapsed-width);
+}
+
+.content-area {
+  flex: 1;
+  padding: var(--space-6);
+  margin-top: var(--topbar-height);
+  overflow-y: auto;
+  animation: fadeIn 300ms ease forwards;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-content {
+    padding-left: 0 !important;
+  }
+  
+  .content-area {
+    padding: var(--space-4);
+  }
+}

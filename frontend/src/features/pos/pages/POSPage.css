@@ -1,0 +1,107 @@
+/* POS Page Custom Styles */
+
+.pos-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-height: calc(100vh - var(--topbar-height) - 48px);
+}
+
+.pos-search-header {
+  padding: var(--space-4);
+  position: relative;
+}
+
+.pos-search-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--color-bg-elevated);
+  border: var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-modal);
+  padding: var(--space-2);
+}
+
+.pos-search-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.pos-search-item:hover {
+  background: var(--color-bg-glass);
+}
+
+/* POS Layout Grid */
+.pos-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+  flex: 1;
+}
+
+.pos-left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pos-student-card {
+  padding: var(--space-5);
+}
+
+.pos-savings-badge {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.pos-savings-badge strong {
+  font-size: var(--text-md);
+}
+
+.pos-right-panel {
+  height: 100%;
+}
+
+.pos-cart-card {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-6));
+  max-height: calc(100vh - var(--topbar-height) - 100px);
+}
+
+.pos-cart-items {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pos-cart-item {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .pos-grid {
+    grid-template-columns: 1fr;
+  }
+  .pos-cart-card {
+    position: static;
+    max-height: none;
+  }
+}

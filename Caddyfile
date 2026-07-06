@@ -1,0 +1,15 @@
+# Ganti 'domain-anda.com' dengan nama domain publik Anda
+# Contoh: bayaran.sekolah.sch.id
+domain-anda.com {
+    # Rute ke API Backend
+    handle_path /api/* {
+        reverse_proxy backend:3000
+    }
+
+    # Rute sisanya dilempar ke Frontend Nginx Container
+    handle {
+        reverse_proxy frontend:80
+    }
+
+    # Caddy akan otomatis mengurus pembuatan sertifikat SSL (HTTPS) dari Let's Encrypt!
+}
