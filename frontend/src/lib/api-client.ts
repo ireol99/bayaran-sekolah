@@ -91,7 +91,7 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string, params?: Record<string, string | number | boolean>): Promise<ApiSuccess<T>> {
-    const url = new URL(`${this.baseUrl}${endpoint}`);
+    const url = new URL(`${this.baseUrl}${endpoint}`, window.location.origin);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
