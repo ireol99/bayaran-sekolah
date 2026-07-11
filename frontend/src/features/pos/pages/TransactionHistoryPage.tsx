@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import * as Icons from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { utils, write } from 'xlsx';
+import { api } from '../../../lib/api-client';
 
 interface GroupedReceipt {
   receiptNumber: string;
@@ -48,6 +49,21 @@ export default function TransactionHistoryPage() {
   const [reprintModalOpen, setReprintModalOpen] = useState(false);
   const [reprintReceipt, setReprintReceipt] = useState<GroupedReceipt | null>(null);
   const printAreaRef = useRef<HTMLDivElement>(null);
+
+  // Madrasah settings
+  const [madrasahProfile, setMadrasahProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchMadrasahProfile = async () => {
+      try {
+        const res = await api.get<any>('/settings/profile');
+        setMadrasahProfile(res.data?.data || res.data);
+      } catch (err) {
+        console.error('Gagal memuat profil madrasah:', err);
+      }
+    };
+    fetchMadrasahProfile();
+  }, [reprintModalOpen]);
 
   const handlePrint = useReactToPrint({
     contentRef: printAreaRef,
@@ -551,9 +567,41 @@ export default function TransactionHistoryPage() {
             <div className="modal-body" style={{ background: '#f8fafc', padding: 'var(--space-4)' }}>
               <div ref={printAreaRef} className="pos-receipt-printable" style={{ padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#1e293b' }}>
                 <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                  <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>MADRASAH ALIYAH / TSANAWIYAH</h2>
-                  <div style={{ fontSize: '10px', color: '#64748b' }}>Jl. Pendidikan No. 45 Sukamaju Bandung</div>
-                  <div style={{ borderBottom: '1px dashed #cbd5e1', margin: '8px 0' }}></div>
+                  {madrasahProfile?.useLetterhead ? (
+                    <div style={{ display: 'flex', alignItems: 'center', borderBottom: '3px double #000', paddingBottom: '8px', marginBottom: '12px', textAlign: 'left' }}>
+                      {madrasahProfile?.logo && (
+                        <div style={{ marginRight: '16px', flexShrink: 0 }}>
+                          <img src={madrasahProfile.logo} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+                        </div>
+                      )}
+                      <div style={{ flexGrow: 1, textAlign: 'center', paddingRight: madrasahProfile?.logo ? '60px' : '0' }}>
+                        <h3 style={{ fontSize: '10px', fontWeight: 'normal', margin: 0, letterSpacing: '1px', textTransform: 'uppercase', color: '#475569' }}>
+                          {madrasahProfile?.schoolName || 'YAYASAN PENDIDIKAN ISLAM'}
+                        </h3>
+                        <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: '4px 0', textTransform: 'uppercase', color: '#0f172a' }}>
+                          {reprintReceipt?.level === 'MI' ? madrasahProfile?.miName : reprintReceipt?.level === 'MTS' ? madrasahProfile?.mtsName : reprintReceipt?.level === 'MA' ? madrasahProfile?.maName : (madrasahProfile?.schoolName || 'MADRASAH TERPADU')}
+                        </h2>
+                        <div style={{ fontSize: '9px', color: '#475569', lineHeight: '1.3' }}>
+                          {madrasahProfile?.address || 'Jl. Pendidikan No. 45 Sukamaju Bandung'}
+                        </div>
+                        {madrasahProfile?.phone && (
+                          <div style={{ fontSize: '9px', color: '#475569', marginTop: '2px' }}>
+                            Telp: {madrasahProfile.phone} {madrasahProfile.email ? ` | Email: ${madrasahProfile.email}` : ''}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center' }}>
+                      <h2 style={{ fontSize: '13px', fontWeight: 'bold', margin: 0 }}>
+                        {reprintReceipt?.level === 'MI' ? madrasahProfile?.miName : reprintReceipt?.level === 'MTS' ? madrasahProfile?.mtsName : reprintReceipt?.level === 'MA' ? madrasahProfile?.maName : (madrasahProfile?.schoolName || 'MADRASAH')}
+                      </h2>
+                      <div style={{ fontSize: '10px', color: '#64748b' }}>
+                        {madrasahProfile?.address || 'Jl. Pendidikan No. 45 Sukamaju Bandung'}
+                      </div>
+                      <div style={{ borderBottom: '1px dashed #cbd5e1', margin: '8px 0' }}></div>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', marginBottom: '8px' }}>
@@ -622,8 +670,10 @@ export default function TransactionHistoryPage() {
 
                 <div style={{ borderBottom: '1px dashed #cbd5e1', margin: '8px 0' }}></div>
                 <div style={{ textAlign: 'center', fontSize: '10px', color: '#64748b' }}>
-                  <p style={{ margin: '2px 0' }}>[CETAK ULANG STRUK]</p>
-                  <p style={{ margin: '2px 0' }}>Terima kasih atas pembayaran Anda.</p>
+                  <p style={{ margin: '2px 0', fontWeight: 'bold' }}>[CETAK ULANG STRUK (REPRINT)]</p>
+                  <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px' }}>
+                    {madrasahProfile?.receiptFooter || 'Terima kasih atas pembayaran Anda.\nSemoga berkah & bermanfaat.'}
+                  </div>
                 </div>
               </div>
             </div>

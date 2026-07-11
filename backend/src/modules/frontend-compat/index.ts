@@ -64,6 +64,7 @@ export const frontendCompatModule = new Elysia({ prefix: '/api' })
         email: user.email,
         name: user.name,
         role: user.role,
+        avatar: user.avatar,
       });
 
       return {
@@ -75,6 +76,7 @@ export const frontendCompatModule = new Elysia({ prefix: '/api' })
             email: user.email,
             name: user.name,
             role: user.role,
+            avatar: user.avatar,
           },
         },
       };
@@ -89,8 +91,80 @@ export const frontendCompatModule = new Elysia({ prefix: '/api' })
 
   // GET /api/auth/me -> Frontend mengharapkan { data: User }
   .get('/auth/me', async ({ getAuthUser }) => {
-    const user = await getAuthUser();
+    const authUser = await getAuthUser();
+    const [user] = await db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        name: usersTable.name,
+        role: usersTable.role,
+        avatar: usersTable.avatar,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, authUser.id))
+      .limit(1);
+
+    if (!user) {
+      throw new Error('User tidak ditemukan');
+    }
     return { success: true, data: user };
+  })
+
+  // PUT /api/auth/profile -> Update user profile details
+  .put('/auth/profile', async ({ body, getAuthUser }) => {
+    const authUser = await getAuthUser();
+    const { name, email, avatar, oldPassword, newPassword } = body as any;
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, authUser.id)).limit(1);
+    if (!user) {
+      throw new Error('Pengguna tidak ditemukan');
+    }
+
+    const updateData: Record<string, any> = { updatedAt: new Date() };
+
+    if (name) updateData.name = name;
+    if (email && email !== user.email) {
+      const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+      if (existing) {
+        throw new Error('Email sudah digunakan oleh akun lain');
+      }
+      updateData.email = email;
+    }
+    
+    if (avatar !== undefined) {
+      updateData.avatar = avatar;
+    }
+
+    if (newPassword) {
+      if (!oldPassword) {
+        throw new Error('Harap masukkan password lama Anda');
+      }
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new Error('Password lama salah');
+      }
+      if (newPassword.length < 6) {
+        throw new Error('Password baru harus minimal 6 karakter');
+      }
+      updateData.passwordHash = await bcrypt.hash(newPassword, 10);
+    }
+
+    await db.update(usersTable).set(updateData).where(eq(usersTable.id, user.id));
+
+    // Get updated info
+    const [updatedUser] = await db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        name: usersTable.name,
+        role: usersTable.role,
+        avatar: usersTable.avatar,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, user.id))
+      .limit(1);
+
+    return { success: true, data: updatedUser };
   })
 
   // POST /api/auth/logout (no-op, frontend clears localStorage)
@@ -1223,27 +1297,49 @@ export const frontendCompatModule = new Elysia({ prefix: '/api' })
   // WHATSAPP GATEWAY CONFIG ROUTES
   // ===========================================================================
   .get('/whatsapp-config', async () => {
+    const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, 'PROFILE'));
+    let waConfig = {
+      provider: 'FONNTE',
+      apiUrl: 'https://api.fonnte.com/send',
+      apiToken: 'fn_tok_9823489237498237',
+      senderPhone: '081234567890',
+      autoSendReceipt: true,
+      autoSendInvoice: true,
+      autoSendReminder: true,
+      receiptTemplate: 'Yth. Wali Murid {nama_siswa}, Pembayaran {jenis_tagihan} ({periode}) sebesar {jumlah} telah LUNAS. No. Struk: {no_struk}. Terima kasih.',
+      invoiceTemplate: 'Yth. Wali Murid {nama_siswa}, Tagihan baru {jenis_tagihan} ({periode}) sebesar {jumlah} telah diterbitkan. No. Billing: {no_billing}.',
+      isConnected: true,
+    };
+    if (settings && settings.whatsappConfig) {
+      try {
+        const parsed = JSON.parse(settings.whatsappConfig);
+        waConfig = { ...waConfig, ...parsed };
+      } catch (e) {}
+    }
     return {
       success: true,
-      data: {
-        provider: 'FONNTE',
-        apiUrl: 'https://api.fonnte.com/send',
-        apiToken: 'fn_tok_9823489237498237',
-        senderPhone: '081234567890',
-        autoSendReceipt: true,
-        autoSendInvoice: true,
-        autoSendReminder: true,
-        receiptTemplate: 'Yth. Wali Murid {nama_siswa}, Pembayaran {jenis_tagihan} ({periode}) sebesar {jumlah} telah LUNAS. No. Struk: {no_struk}. Terima kasih.',
-        invoiceTemplate: 'Yth. Wali Murid {nama_siswa}, Tagihan baru {jenis_tagihan} ({periode}) sebesar {jumlah} telah diterbitkan. No. Billing: {no_billing}.',
-        isConnected: true,
-      },
+      data: waConfig,
     };
   })
 
   .post('/whatsapp-config', async ({ body }) => {
+    const payload = body as any;
+    const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, 'PROFILE'));
+    let mergedConfig = {};
+    if (settings && settings.whatsappConfig) {
+      try {
+        mergedConfig = JSON.parse(settings.whatsappConfig);
+      } catch (e) {}
+    }
+    mergedConfig = { ...mergedConfig, ...payload };
+    
+    await db.update(settingsTable)
+      .set({ whatsappConfig: JSON.stringify(mergedConfig), updatedAt: new Date() })
+      .where(eq(settingsTable.id, 'PROFILE'));
+
     return {
       success: true,
-      data: body,
+      data: mergedConfig,
       message: 'Pengaturan API WhatsApp berhasil disimpan',
     };
   })
@@ -1368,10 +1464,22 @@ export const frontendCompatModule = new Elysia({ prefix: '/api' })
 
   .post('/settings/profile', async ({ body, requireRoles }) => {
     await requireRoles(['SUPERADMIN']);
-    const { schoolName, miName, mtsName, maName, address, phone, email, receiptFooter } = body as any;
+    const { schoolName, miName, mtsName, maName, address, phone, email, receiptFooter, logo, useLetterhead } = body as any;
     
     const [updatedProfile] = await db.update(settingsTable)
-      .set({ schoolName, miName, mtsName, maName, address, phone, email, receiptFooter, updatedAt: new Date() })
+      .set({ 
+        schoolName, 
+        miName, 
+        mtsName, 
+        maName, 
+        address, 
+        phone, 
+        email, 
+        receiptFooter, 
+        logo, 
+        useLetterhead: useLetterhead ?? false, 
+        updatedAt: new Date() 
+      })
       .where(eq(settingsTable.id, 'PROFILE'))
       .returning();
 

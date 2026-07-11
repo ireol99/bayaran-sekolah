@@ -11,6 +11,7 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  avatar?: string | null;
 }
 
 interface AuthContextType {
@@ -21,6 +22,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
   rolePermissions: Record<string, string[]>;
+  updateUser: (updatedUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -124,6 +126,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [user],
   );
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -134,6 +140,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         logout,
         hasRole,
         rolePermissions,
+        updateUser,
       }}
     >
       {children}

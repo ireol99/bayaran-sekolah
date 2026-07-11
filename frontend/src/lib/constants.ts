@@ -187,6 +187,7 @@ export const NAV_ITEMS: NavItem[] = [
       { id: 'user-management', label: 'Manajemen User', path: '/settings/users', icon: 'UserCog', roles: ['SUPERADMIN'] },
       { id: 'role-permissions', label: 'Hak Akses', path: '/settings/permissions', icon: 'ShieldAlert', roles: ['SUPERADMIN'] },
       { id: 'madrasah-profile', label: 'Profil Madrasah', path: '/settings/profile', icon: 'Building2', roles: ['SUPERADMIN', 'YAYASAN'] },
+      { id: 'api-gateway', label: 'Gateway WhatsApp', path: '/settings/gateway', icon: 'Cpu', roles: ['SUPERADMIN'] },
       { id: 'database-backup', label: 'Backup & Reset DB', path: '/settings/backup', icon: 'Database', roles: ['SUPERADMIN'] },
     ],
   },

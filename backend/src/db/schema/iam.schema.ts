@@ -14,6 +14,7 @@ export const usersTable = pgTable('users', {
   role: text('role', {
     enum: ['SUPERADMIN', 'ADMIN_TU', 'KEPALA_SEKOLAH', 'YAYASAN'],
   }).notNull().default('ADMIN_TU'),
+  avatar: text('avatar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

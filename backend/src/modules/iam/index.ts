@@ -43,6 +43,7 @@ export const iamModule = new Elysia({ prefix: '/api/v1/auth' })
         email: user.email,
         name: user.name,
         role: user.role,
+        avatar: user.avatar,
       });
 
       return successResponse('Login berhasil', {
@@ -52,6 +53,7 @@ export const iamModule = new Elysia({ prefix: '/api/v1/auth' })
           name: user.name,
           email: user.email,
           role: user.role,
+          avatar: user.avatar,
         },
       });
     },
@@ -120,10 +122,98 @@ export const iamModule = new Elysia({ prefix: '/api/v1/auth' })
   .get(
     '/me',
     async ({ getAuthUser }) => {
-      const user = await getAuthUser();
+      const authUser = await getAuthUser();
+      const [user] = await db
+        .select({
+          id: usersTable.id,
+          name: usersTable.name,
+          email: usersTable.email,
+          role: usersTable.role,
+          avatar: usersTable.avatar,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.id, authUser.id))
+        .limit(1);
+
+      if (!user) {
+        return errorResponse('User tidak ditemukan.');
+      }
       return successResponse('Profil pengguna aktif', user);
     },
     {
       detail: { tags: ['Auth'], summary: 'Dapatkan profil akun dari JWT Token' },
+    }
+  )
+
+  // ---------------------------------------------------------------------------
+  // 4. PUT /api/v1/auth/profile -> Perbarui Profil Pengguna Aktif
+  // ---------------------------------------------------------------------------
+  .put(
+    '/profile',
+    async ({ body, getAuthUser }) => {
+      const authUser = await getAuthUser();
+      const { name, email, avatar, oldPassword, newPassword } = body;
+
+      // Cari user
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, authUser.id)).limit(1);
+      if (!user) {
+        return errorResponse('Pengguna tidak ditemukan.');
+      }
+
+      const updateData: Record<string, any> = { updatedAt: new Date() };
+
+      if (name) updateData.name = name;
+      if (email && email !== user.email) {
+        const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+        if (existing) {
+          return errorResponse('Email sudah digunakan oleh akun lain.');
+        }
+        updateData.email = email;
+      }
+      
+      if (avatar !== undefined) {
+        updateData.avatar = avatar;
+      }
+
+      if (newPassword) {
+        if (!oldPassword) {
+          return errorResponse('Harap masukkan password lama Anda untuk mengubah password.');
+        }
+        const isPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
+        if (!isPasswordValid) {
+          return errorResponse('Password lama yang Anda masukkan salah.');
+        }
+        if (newPassword.length < 6) {
+          return errorResponse('Password baru harus minimal 6 karakter.');
+        }
+        updateData.passwordHash = await bcrypt.hash(newPassword, 10);
+      }
+
+      await db.update(usersTable).set(updateData).where(eq(usersTable.id, user.id));
+
+      // Ambil data terbaru
+      const [updatedUser] = await db
+        .select({
+          id: usersTable.id,
+          name: usersTable.name,
+          email: usersTable.email,
+          role: usersTable.role,
+          avatar: usersTable.avatar,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.id, user.id))
+        .limit(1);
+
+      return successResponse('Profil berhasil diperbarui.', updatedUser);
+    },
+    {
+      body: t.Object({
+        name: t.Optional(t.String()),
+        email: t.Optional(t.String({ format: 'email' })),
+        avatar: t.Optional(t.Union([t.String(), t.Null()])),
+        oldPassword: t.Optional(t.String()),
+        newPassword: t.Optional(t.String()),
+      }),
+      detail: { tags: ['Auth'], summary: 'Perbarui profil pengguna (Nama, Avatar, Password)' },
     }
   );

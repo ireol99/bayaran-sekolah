@@ -100,8 +100,12 @@ export default function TopBar() {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             aria-expanded={dropdownOpen}
           >
-            <div className="avatar avatar-sm">
-              {user ? getInitials(user.name) : 'U'}
+            <div className="avatar avatar-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                user ? getInitials(user.name) : 'U'
+              )}
             </div>
             <div className="topbar-user-info">
               <span className="topbar-username">{user?.name || 'User'}</span>
@@ -118,12 +122,12 @@ export default function TopBar() {
               </div>
               <div className="dropdown-separator"></div>
               
-              <button className="dropdown-item" onClick={() => navigate('/settings/profile')}>
+              <button className="dropdown-item" onClick={() => { setDropdownOpen(false); navigate('/settings/profile'); }}>
                 <Icons.Building2 size={16} />
                 <span>Profil Madrasah</span>
               </button>
               
-              <button className="dropdown-item" onClick={() => navigate('/settings/profile')}>
+              <button className="dropdown-item" onClick={() => { setDropdownOpen(false); navigate('/settings/user-profile'); }}>
                 <Icons.User size={16} />
                 <span>Pengaturan Akun</span>
               </button>

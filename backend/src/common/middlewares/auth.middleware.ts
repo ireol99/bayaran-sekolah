@@ -20,6 +20,7 @@ export interface UserPayload {
   email: string;
   name: string;
   role: 'SUPERADMIN' | 'ADMIN_TU' | 'KEPALA_SEKOLAH' | 'YAYASAN';
+  avatar?: string | null;
 }
 
 export const authPlugin = new Elysia({ name: 'auth-plugin' })

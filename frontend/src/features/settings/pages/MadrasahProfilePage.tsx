@@ -17,6 +17,7 @@ export default function MadrasahProfilePage() {
   const [email, setEmail] = useState('info@madrasah-terpadu.sch.id');
   const [receiptFooter, setReceiptFooter] = useState('Terima kasih atas pembayaran Anda. Semoga berkah.');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [useLetterhead, setUseLetterhead] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,6 +35,8 @@ export default function MadrasahProfilePage() {
           setPhone(data.phone || '');
           setEmail(data.email || '');
           setReceiptFooter(data.receiptFooter || '');
+          setLogoPreview(data.logo || null);
+          setUseLetterhead(data.useLetterhead || false);
         }
       } catch (err) {
         toast.error('Gagal memuat profil madrasah');
@@ -69,6 +72,8 @@ export default function MadrasahProfilePage() {
         phone,
         email,
         receiptFooter,
+        logo: logoPreview,
+        useLetterhead,
       });
       toast.success('Profil madrasah berhasil diperbarui ke database');
     } catch (err: any) {
@@ -194,6 +199,73 @@ export default function MadrasahProfilePage() {
               />
               <span className="form-hint">Muncul secara otomatis pada saat cetak struk POS printer thermal.</span>
             </div>
+
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+              <input
+                type="checkbox"
+                id="useLetterhead"
+                checked={useLetterhead}
+                onChange={(e) => setUseLetterhead(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <label htmlFor="useLetterhead" style={{ fontWeight: '600', cursor: 'pointer' }}>Gunakan Kop Surat pada Cetakan Struk</label>
+            </div>
+            <span className="form-hint" style={{ marginTop: '-8px', display: 'block' }}>
+              Jika dicentang, struk akan dicetak menggunakan kop surat & logo lengkap (sangat cocok untuk printer deskjet/inkjet). Jika tidak dicentang, struk akan dicetak hemat ruang (cocok untuk printer thermal).
+            </span>
+
+            {useLetterhead && (
+              <div className="form-group animate-fade-in" style={{ marginTop: 'var(--space-4)' }}>
+                <label className="form-label">Logo Kop Surat Madrasah</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    backgroundColor: 'var(--color-bg-tertiary)'
+                  }}>
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo Madrasah" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <Icons.Building size={24} style={{ color: 'var(--color-text-muted)', opacity: 0.5 }} />
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoChange}
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          opacity: 0,
+                          cursor: 'pointer',
+                          width: '100px'
+                        }}
+                      />
+                      <button type="button" className="btn btn-secondary btn-sm" style={{ pointerEvents: 'none' }}>
+                        <Icons.Upload size={14} />
+                        <span>Pilih File Logo</span>
+                      </button>
+                    </div>
+                    {logoPreview && (
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setLogoPreview(null)} style={{ color: 'var(--color-danger)', width: 'fit-content', borderColor: 'var(--color-danger-border)' }}>
+                        Hapus Logo
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <span className="form-hint" style={{ marginTop: '4px' }}>
+                  Format yang didukung: PNG, JPG, WEBP (Maks 1MB). Direkomendasikan format square 1:1.
+                </span>
+              </div>
+            )}
 
             <div className="divider"></div>
 

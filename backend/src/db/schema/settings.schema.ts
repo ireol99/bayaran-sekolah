@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core';
 
 export const settingsTable = pgTable('settings', {
   id: text('id').primaryKey().default('PROFILE'),
@@ -10,6 +10,9 @@ export const settingsTable = pgTable('settings', {
   phone: text('phone').notNull().default('022-7654321'),
   email: text('email').notNull().default('info@madrasah-terpadu.sch.id'),
   receiptFooter: text('receipt_footer').notNull().default('Terima kasih atas pembayaran Anda. Semoga berkah.'),
+  logo: text('logo'),
+  useLetterhead: boolean('use_letterhead').default(false).notNull(),
+  whatsappConfig: text('whatsapp_config').default('{}'),
   rolePermissions: text('role_permissions').default('{}'), // JSON string mapping Role to Array of allowed Menu IDs
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

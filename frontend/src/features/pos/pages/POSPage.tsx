@@ -11,6 +11,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { toast } from 'sonner';
 import { useReactToPrint } from 'react-to-print';
 import { whatsappService } from '../../notifications/whatsappService';
+import { api } from '../../../lib/api-client';
 import * as Icons from 'lucide-react';
 import './POSPage.css';
 
@@ -37,6 +38,21 @@ export default function POSPage() {
   const [completedTransactions, setCompletedTransactions] = useState<Transaction[]>([]);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Madrasah settings
+  const [madrasahProfile, setMadrasahProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchMadrasahProfile = async () => {
+      try {
+        const res = await api.get<any>('/settings/profile');
+        setMadrasahProfile(res.data?.data || res.data);
+      } catch (err) {
+        console.error('Gagal memuat profil madrasah:', err);
+      }
+    };
+    fetchMadrasahProfile();
+  }, [printModalOpen]);
 
   // Search autocomplete
   useEffect(() => {
@@ -427,9 +443,41 @@ export default function POSPage() {
             <div className="modal-body" style={{ background: '#f8fafc', padding: 'var(--space-4)', maxHeight: '420px', overflowY: 'auto' }}>
               <div ref={printAreaRef} className="pos-receipt-printable" style={{ padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#1e293b' }}>
                 <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                  <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>MADRASAH ALIYAH / TSANAWIYAH</h2>
-                  <div style={{ fontSize: '10px', color: '#64748b' }}>Jl. Pendidikan No. 45 Sukamaju Bandung</div>
-                  <div style={{ borderBottom: '1px dashed #cbd5e1', margin: '8px 0' }}></div>
+                  {madrasahProfile?.useLetterhead ? (
+                    <div style={{ display: 'flex', alignItems: 'center', borderBottom: '3px double #000', paddingBottom: '8px', marginBottom: '12px', textAlign: 'left' }}>
+                      {madrasahProfile?.logo && (
+                        <div style={{ marginRight: '16px', flexShrink: 0 }}>
+                          <img src={madrasahProfile.logo} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+                        </div>
+                      )}
+                      <div style={{ flexGrow: 1, textAlign: 'center', paddingRight: madrasahProfile?.logo ? '60px' : '0' }}>
+                        <h3 style={{ fontSize: '10px', fontWeight: 'normal', margin: 0, letterSpacing: '1px', textTransform: 'uppercase', color: '#475569' }}>
+                          {madrasahProfile?.schoolName || 'YAYASAN PENDIDIKAN ISLAM'}
+                        </h3>
+                        <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: '4px 0', textTransform: 'uppercase', color: '#0f172a' }}>
+                          {selectedStudent?.level === 'MI' ? madrasahProfile?.miName : selectedStudent?.level === 'MTS' ? madrasahProfile?.mtsName : selectedStudent?.level === 'MA' ? madrasahProfile?.maName : (madrasahProfile?.schoolName || 'MADRASAH TERPADU')}
+                        </h2>
+                        <div style={{ fontSize: '9px', color: '#475569', lineHeight: '1.3' }}>
+                          {madrasahProfile?.address || 'Jl. Pendidikan No. 45 Sukamaju Bandung'}
+                        </div>
+                        {madrasahProfile?.phone && (
+                          <div style={{ fontSize: '9px', color: '#475569', marginTop: '2px' }}>
+                            Telp: {madrasahProfile.phone} {madrasahProfile.email ? ` | Email: ${madrasahProfile.email}` : ''}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center' }}>
+                      <h2 style={{ fontSize: '13px', fontWeight: 'bold', margin: 0 }}>
+                        {selectedStudent?.level === 'MI' ? madrasahProfile?.miName : selectedStudent?.level === 'MTS' ? madrasahProfile?.mtsName : selectedStudent?.level === 'MA' ? madrasahProfile?.maName : (madrasahProfile?.schoolName || 'MADRASAH')}
+                      </h2>
+                      <div style={{ fontSize: '10px', color: '#64748b' }}>
+                        {madrasahProfile?.address || 'Jl. Pendidikan No. 45 Sukamaju Bandung'}
+                      </div>
+                      <div style={{ borderBottom: '1px dashed #cbd5e1', margin: '8px 0' }}></div>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', marginBottom: '8px' }}>
@@ -497,9 +545,8 @@ export default function POSPage() {
                 </div>
 
                 <div style={{ borderBottom: '1px dashed #cbd5e1', margin: '8px 0' }}></div>
-                <div style={{ textAlign: 'center', fontSize: '10px', color: '#64748b' }}>
-                  <p style={{ margin: '2px 0' }}>Terima kasih atas pembayaran Anda.</p>
-                  <p style={{ margin: '2px 0' }}>Semoga berkah & bermanfaat.</p>
+                <div style={{ textAlign: 'center', fontSize: '10px', color: '#64748b', whiteSpace: 'pre-wrap' }}>
+                  {madrasahProfile?.receiptFooter || 'Terima kasih atas pembayaran Anda.\nSemoga berkah & bermanfaat.'}
                 </div>
               </div>
             </div>

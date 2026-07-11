@@ -60,10 +60,7 @@ export default function NotificationCenterPage() {
     isConnected: true,
   });
 
-  const [showToken, setShowToken] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [testPhone, setTestPhone] = useState('081234567890');
-  const [testingConnection, setTestingConnection] = useState(false);
 
   // Fetch initial config from backend if available
   useEffect(() => {
@@ -130,22 +127,6 @@ export default function NotificationCenterPage() {
     }
   };
 
-  const handleTestConnection = async () => {
-    if (!testPhone.trim()) {
-      toast.error('Masukkan nomor WhatsApp tujuan uji coba');
-      return;
-    }
-
-    setTestingConnection(true);
-    try {
-      await api.post('/whatsapp-config/test', { phone: testPhone });
-      toast.success(`Pesan uji coba WhatsApp berhasil dikirim ke ${testPhone}! API Gateway Aktif.`);
-    } catch {
-      toast.success(`Pesan tes WhatsApp terkirim ke ${testPhone}! Koneksi API Valid.`);
-    } finally {
-      setTestingConnection(false);
-    }
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }} className="animate-fade-in">
@@ -170,7 +151,7 @@ export default function NotificationCenterPage() {
             onClick={() => setActiveTab('SETTINGS')}
           >
             <Icons.Settings size={16} />
-            <span>Pengaturan API WhatsApp</span>
+            <span>Template & Otomatisasi</span>
           </button>
         </div>
       </div>
@@ -305,217 +286,117 @@ export default function NotificationCenterPage() {
           </div>
         </>
       ) : (
-        /* TAB 2: PENGATURAN API WHATSAPP FORM */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
-          
-          {/* Card 1: Konfigurasi Server API & Token */}
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-              <div>
-                <h3 className="card-title">1. Server & Otorisasi Gateway API</h3>
-                <span className="text-muted" style={{ fontSize: 'var(--text-xs)' }}>Konfigurasi provider pengiriman WhatsApp otomatis.</span>
-              </div>
-              <span className={`badge ${waConfig.isConnected ? 'badge-success' : 'badge-danger'}`}>
-                {waConfig.isConnected ? '● TERHUBUNG' : '● TERPUTUS'}
-              </span>
+        /* TAB 2: PENGATURAN TEMPLATE & OTOMATISASI WHATSAPP FORM */
+        <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
+            
+            {/* Card 1: Otomatisasi Pengiriman */}
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icons.ToggleRight size={18} />
+                <span>Otomatisasi Pengiriman Pesan</span>
+              </h3>
+              <p className="text-muted" style={{ fontSize: 'var(--text-xs)', marginBottom: 'var(--space-2)' }}>
+                Tentukan kejadian transaksi apa saja yang akan memicu pengiriman pesan WhatsApp secara otomatis kepada Wali Murid.
+              </p>
+              
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>
+                <input
+                  type="checkbox"
+                  checked={waConfig.autoSendReceipt}
+                  onChange={(e) => setWaConfig({ ...waConfig, autoSendReceipt: e.target.checked })}
+                />
+                <span>Kirim Struk/Bukti Bayar Otomatis saat Transaksi Kasir Lunas</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>
+                <input
+                  type="checkbox"
+                  checked={waConfig.autoSendInvoice}
+                  onChange={(e) => setWaConfig({ ...waConfig, autoSendInvoice: e.target.checked })}
+                />
+                <span>Kirim Notifikasi Tagihan Baru ke Wali Murid saat Diterbitkan</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>
+                <input
+                  type="checkbox"
+                  checked={waConfig.autoSendReminder}
+                  onChange={(e) => setWaConfig({ ...waConfig, autoSendReminder: e.target.checked })}
+                />
+                <span>Kirim Pengingat Jatuh Tempo (Reminder) Otomatis</span>
+              </label>
             </div>
 
-            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              
-              {/* Provider */}
-              <div className="form-group">
-                <label className="form-label">Pilih Provider WhatsApp API</label>
-                <select
-                  className="form-input form-select"
-                  value={waConfig.provider}
-                  onChange={(e) => {
-                    const prov = e.target.value;
-                    let defaultUrl = waConfig.apiUrl;
-                    if (prov === 'FONNTE') defaultUrl = 'https://api.fonnte.com/send';
-                    if (prov === 'WABLAS') defaultUrl = 'https://api.wablas.com/api/send-message';
-                    if (prov === 'RUANGWA') defaultUrl = 'https://ruangwa.com/api/send-message.php';
-                    setWaConfig({ ...waConfig, provider: prov, apiUrl: defaultUrl });
-                  }}
-                >
-                  <option value="FONNTE">Fonnte (Rekomendasi - Fast Speed)</option>
-                  <option value="WABLAS">Wablas Gateway</option>
-                  <option value="RUANGWA">RuangWA / WooWA</option>
-                  <option value="GENERIC_HTTP">Generic Webhook / Custom HTTP API</option>
-                </select>
-              </div>
+            {/* Card 2: Form Template Pesan WhatsApp */}
+            <div className="card">
+              <h3 className="card-title" style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icons.FileText size={18} />
+                <span>Template Pesan Otomatis</span>
+              </h3>
 
-              {/* Endpoint API URL */}
-              <div className="form-group">
-                <label className="form-label">Base URL API Endpoint</label>
-                <input
-                  type="url"
-                  className="form-input"
-                  value={waConfig.apiUrl}
-                  onChange={(e) => setWaConfig({ ...waConfig, apiUrl: e.target.value })}
-                  placeholder="https://api.fonnte.com/send"
-                  required
-                />
-              </div>
-
-              {/* API Token / Secret Key */}
-              <div className="form-group">
-                <label className="form-label">API Token / Secret Key</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type={showToken ? 'text' : 'password'}
-                    className="form-input"
-                    value={waConfig.apiToken}
-                    onChange={(e) => setWaConfig({ ...waConfig, apiToken: e.target.value })}
-                    placeholder="Masukkan token API..."
-                    required
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowToken(!showToken)}
-                  >
-                    {showToken ? <Icons.EyeOff size={16} /> : <Icons.Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Sender Device Phone */}
-              <div className="form-group">
-                <label className="form-label">Nomor WhatsApp Pengirim (Sender Device)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={waConfig.senderPhone}
-                  onChange={(e) => setWaConfig({ ...waConfig, senderPhone: e.target.value })}
-                  placeholder="081234567890"
-                  required
-                />
-              </div>
-
-              {/* Checkbox Otomatisasi */}
-              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                <label className="form-label" style={{ marginBottom: '4px' }}>Otomatisasi Pengiriman Pesan</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>
-                  <input
-                    type="checkbox"
-                    checked={waConfig.autoSendReceipt}
-                    onChange={(e) => setWaConfig({ ...waConfig, autoSendReceipt: e.target.checked })}
-                  />
-                  <span>Kirim Struk/Bukti Bayar Otomatis saat Transaksi Kasir Lunas</span>
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>
-                  <input
-                    type="checkbox"
-                    checked={waConfig.autoSendInvoice}
-                    onChange={(e) => setWaConfig({ ...waConfig, autoSendInvoice: e.target.checked })}
-                  />
-                  <span>Kirim Notifikasi Tagihan Baru ke Wali Murid saat Diterbitkan</span>
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>
-                  <input
-                    type="checkbox"
-                    checked={waConfig.autoSendReminder}
-                    onChange={(e) => setWaConfig({ ...waConfig, autoSendReminder: e.target.checked })}
-                  />
-                  <span>Kirim Pengingat Jatuh Tempo (Reminder) Otomatis</span>
-                </label>
-              </div>
-
-              {/* Test Connection Box */}
-              <div style={{ background: 'var(--color-bg-tertiary)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: 'var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Uji Coba Koneksi API (Test Message)</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
+                {/* Template Struk Pembayaran */}
+                <div className="form-group">
+                  <label className="form-label">Template Pesan Struk Pembayaran Lunas</label>
+                  <textarea
                     className="form-input"
-                    value={testPhone}
-                    onChange={(e) => setTestPhone(e.target.value)}
-                    placeholder="0812XXXXXXXX"
-                    style={{ flex: 1, fontSize: 'var(--text-xs)', height: '36px' }}
+                    value={waConfig.receiptTemplate}
+                    onChange={(e) => setWaConfig({ ...waConfig, receiptTemplate: e.target.value })}
+                    rows={4}
+                    required
                   />
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={handleTestConnection}
-                    disabled={testingConnection}
-                    style={{ height: '36px' }}
-                  >
-                    <Icons.Send size={14} />
-                    <span>{testingConnection ? 'Mengirim...' : 'Tes Kirim'}</span>
-                  </button>
                 </div>
-              </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 'var(--space-2)' }} disabled={savingSettings}>
-                <Icons.Save size={16} />
-                <span>{savingSettings ? 'Menyimpan...' : 'Simpan Pengaturan API'}</span>
-              </button>
-
-            </form>
-          </div>
-
-          {/* Card 2: Form Template Pesan WhatsApp */}
-          <div className="card">
-            <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>2. Template Pesan Otomatis</h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              
-              {/* Template Struk Pembayaran */}
-              <div className="form-group">
-                <label className="form-label">Template Pesan Struk Pembayaran Lunas</label>
-                <textarea
-                  className="form-input"
-                  value={waConfig.receiptTemplate}
-                  onChange={(e) => setWaConfig({ ...waConfig, receiptTemplate: e.target.value })}
-                  rows={4}
-                  required
-                />
-              </div>
-
-              {/* Template Tagihan Baru */}
-              <div className="form-group">
-                <label className="form-label">Template Pesan Tagihan Baru Diterbitkan</label>
-                <textarea
-                  className="form-input"
-                  value={waConfig.invoiceTemplate}
-                  onChange={(e) => setWaConfig({ ...waConfig, invoiceTemplate: e.target.value })}
-                  rows={4}
-                  required
-                />
-              </div>
-
-              {/* Dynamic Tag Helper Box */}
-              <div style={{ background: 'var(--color-bg-tertiary)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: 'var(--glass-border)' }}>
-                <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Icons.Code size={16} className="text-success" />
-                  <span>Tag Variabel Dinamis yang Tersedia</span>
-                </h4>
-                <p className="text-muted" style={{ fontSize: 'var(--text-xs)', marginBottom: '8px' }}>
-                  Gunakan tag berikut pada template pesan untuk diisi secara otomatis oleh sistem:
-                </p>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {['{nama_siswa}', '{nis}', '{kelas}', '{jenis_tagihan}', '{periode}', '{jumlah}', '{no_struk}', '{no_billing}'].map((tag) => (
-                    <span
-                      key={tag}
-                      className="badge badge-neutral"
-                      style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '11px' }}
-                      onClick={() => toast.info(`Variabel ${tag} disalin ke template!`)}
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                {/* Template Tagihan Baru */}
+                <div className="form-group">
+                  <label className="form-label">Template Pesan Tagihan Baru Diterbitkan</label>
+                  <textarea
+                    className="form-input"
+                    value={waConfig.invoiceTemplate}
+                    onChange={(e) => setWaConfig({ ...waConfig, invoiceTemplate: e.target.value })}
+                    rows={4}
+                    required
+                  />
                 </div>
-              </div>
 
+                {/* Dynamic Tag Helper Box */}
+                <div style={{ background: 'var(--color-bg-tertiary)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: 'var(--glass-border)' }}>
+                  <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Icons.Code size={16} className="text-success" />
+                    <span>Tag Variabel Dinamis yang Tersedia</span>
+                  </h4>
+                  <p className="text-muted" style={{ fontSize: 'var(--text-xs)', marginBottom: '8px' }}>
+                    Gunakan tag berikut pada template pesan untuk diisi secara otomatis oleh sistem:
+                  </p>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {['{nama_siswa}', '{nis}', '{kelas}', '{jenis_tagihan}', '{periode}', '{jumlah}', '{no_struk}', '{no_billing}'].map((tag) => (
+                      <span
+                        key={tag}
+                        className="badge badge-neutral"
+                        style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '11px' }}
+                        onClick={() => toast.info(`Variabel ${tag} disalin ke template!`)}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
             </div>
+
           </div>
 
-        </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="submit" className="btn btn-primary" disabled={savingSettings}>
+              <Icons.Save size={16} />
+              <span>{savingSettings ? 'Menyimpan...' : 'Simpan Konfigurasi'}</span>
+            </button>
+          </div>
+        </form>
       )}
     </div>
   );

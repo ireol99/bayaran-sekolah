@@ -25,6 +25,8 @@ const AcademicYearPage = lazy(() => import('../features/students/pages/AcademicY
 // Settings pages (Phase 2)
 const UserManagementPage = lazy(() => import('../features/auth/pages/UserManagementPage'));
 const MadrasahProfilePage = lazy(() => import('../features/settings/pages/MadrasahProfilePage'));
+const UserProfilePage = lazy(() => import('../features/settings/pages/UserProfilePage'));
+const ApiGatewaySettingsPage = lazy(() => import('../features/settings/pages/ApiGatewaySettingsPage'));
 const RolePermissionsPage = lazy(() => import('../features/settings/pages/RolePermissionsPage'));
 const DatabaseBackupPage = lazy(() => import('../features/settings/pages/DatabaseBackupPage'));
 
@@ -122,6 +124,12 @@ export default function AppRoutes() {
               }
             />
             <Route path="/settings/profile" element={<MadrasahProfilePage />} />
+            <Route path="/settings/user-profile" element={<UserProfilePage />} />
+            <Route path="/settings/gateway" element={
+              <ProtectedRoute allowedRoles={['SUPERADMIN']}>
+                <ApiGatewaySettingsPage />
+              </ProtectedRoute>
+            } />
           </Route>
         </Route>
 
