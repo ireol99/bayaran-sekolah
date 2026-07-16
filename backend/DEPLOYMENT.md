@@ -43,10 +43,10 @@ docker compose up -d --build
 ### Step 4: Jalankan Migration & Seed Data Awal
 ```bash
 # Push skema database ke PostgreSQL container
-docker compose exec app bun run db:push
+docker compose exec backend bun run db:push
 
 # Seed data superadmin & master data awal
-docker compose exec app bun run db:seed
+docker compose exec backend bun run db:seed
 ```
 
 Selesai! Aplikasi backend sekarang sudah berjalan di `http://IP_SERVER_ANDA:3000`.  
