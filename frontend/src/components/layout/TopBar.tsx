@@ -10,7 +10,11 @@ import { NAV_ITEMS } from '../../lib/constants';
 import * as Icons from 'lucide-react';
 import './TopBar.css';
 
-export default function TopBar() {
+interface TopBarProps {
+  onMenuToggle?: () => void;
+}
+
+export default function TopBar({ onMenuToggle }: TopBarProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -68,6 +72,9 @@ export default function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-left">
+        <button className="topbar-menu-toggle" onClick={onMenuToggle} title="Menu">
+          <Icons.Menu size={20} />
+        </button>
         <h2 className="topbar-title animate-fade-in">{getPageTitle()}</h2>
       </div>
 

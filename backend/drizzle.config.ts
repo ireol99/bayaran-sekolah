@@ -12,6 +12,6 @@ export default defineConfig({
   dialect: 'postgresql',
   // Kredensial koneksi database
   dbCredentials: {
-    url: process.env.DATABASE_URL || 'postgresql://postgres:adminDb@localhost:5433/bayaran_madrasah',
+    url: process.env.DATABASE_URL || 'postgresql://postgres:adminDb@localhost:5432/bayaran_madrasah',
   },
 });

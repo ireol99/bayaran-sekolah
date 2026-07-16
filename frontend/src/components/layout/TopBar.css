@@ -29,6 +29,27 @@
   align-items: center;
 }
 
+.topbar-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-right: var(--space-3);
+  transition: all var(--transition-fast);
+}
+
+.topbar-menu-toggle:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+  background: var(--color-bg-glass-hover);
+}
+
 .topbar-title {
   font-size: var(--text-lg);
   font-weight: var(--font-bold);
@@ -170,6 +191,10 @@
   .topbar {
     left: 0;
     padding: 0 var(--space-4);
+  }
+
+  .topbar-menu-toggle {
+    display: flex;
   }
 
   .topbar-user-info,

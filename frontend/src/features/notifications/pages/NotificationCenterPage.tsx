@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../../../lib/api-client';
 import { toast } from 'sonner';
 import * as Icons from 'lucide-react';
+import { studentService, type LevelItem, type ClassItem } from '../../students/studentService';
 
 interface NotificationLog {
   id: string;
@@ -41,8 +42,12 @@ export default function NotificationCenterPage() {
   const [activeTab, setActiveTab] = useState<'LOGS' | 'SETTINGS'>('LOGS');
   const [logs, setLogs] = useState<NotificationLog[]>(INITIAL_LOGS);
 
-  // Reminder trigger states
-  const [targetClass, setTargetClass] = useState('IX-A');
+  // DB Reference states
+  const [dbLevels, setDbLevels] = useState<LevelItem[]>([]);
+  const [dbClasses, setDbClasses] = useState<ClassItem[]>([]);
+  const [selectedLevelId, setSelectedLevelId] = useState('');
+  const [targetClassId, setTargetClassId] = useState('');
+  
   const [customMsg, setCustomMsg] = useState('Diberitahukan kepada seluruh wali murid untuk segera menyelesaikan pembayaran tagihan SPP bulanan sekolah sebelum pelaksanaan ujian tengah semester.');
   const [sendingCampaign, setSendingCampaign] = useState(false);
 
@@ -62,7 +67,7 @@ export default function NotificationCenterPage() {
 
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // Fetch initial config from backend if available
+  // Fetch initial config and reference levels/classes
   useEffect(() => {
     const fetchWaConfig = async () => {
       try {
@@ -74,8 +79,57 @@ export default function NotificationCenterPage() {
         console.error('Menggunakan konfigurasi bawaan WhatsApp API:', err);
       }
     };
+
+    const fetchRefData = async () => {
+      try {
+        const [levelsData, classesData] = await Promise.all([
+          studentService.getLevels(),
+          studentService.getClasses(),
+        ]);
+        setDbLevels(levelsData);
+        setDbClasses(classesData);
+        if (levelsData.length > 0) {
+          setSelectedLevelId(levelsData[0].id);
+        }
+      } catch (err) {
+        console.error('Gagal mengambil data tingkat/kelas:', err);
+      }
+    };
+
     fetchWaConfig();
+    fetchRefData();
   }, []);
+
+  // Fetch logs from backend with polling
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await api.get<NotificationLog[]>('/whatsapp-logs');
+        if (res.data && res.data.length > 0) {
+          setLogs(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch WhatsApp logs:', err);
+      }
+    };
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Filter classes according to selected level
+  const filteredDbClasses = selectedLevelId
+    ? dbClasses.filter((c) => c.levelId === selectedLevelId)
+    : [];
+
+  // Update targetClassId when filtered classes change
+  useEffect(() => {
+    if (filteredDbClasses.length > 0) {
+      setTargetClassId(filteredDbClasses[0].id);
+    } else {
+      setTargetClassId('');
+    }
+  }, [selectedLevelId, dbClasses]);
 
   const handleResend = (id: string, name: string) => {
     toast.promise(
@@ -93,25 +147,28 @@ export default function NotificationCenterPage() {
     );
   };
 
-  const handleSendReminderCampaign = (e: React.FormEvent) => {
+  const handleSendReminderCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     setSendingCampaign(true);
 
-    setTimeout(() => {
-      setSendingCampaign(false);
-      const newLog: NotificationLog = {
-        id: `n_${Date.now()}`,
-        recipientName: `Wali Murid Kelas ${targetClass}`,
-        phone: '0812XXXXXXXX',
-        type: 'REMINDER',
-        message: customMsg,
-        status: 'QUEUED',
-        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      };
+    const matchedClass = dbClasses.find((c) => c.id === targetClassId);
+    const className = matchedClass ? matchedClass.name : 'Target';
 
-      setLogs((prev) => [newLog, ...prev]);
-      toast.success(`Kampanye pengingat massal kelas ${targetClass} berhasil dimasukkan antrian antrean WhatsApp!`);
-    }, 1000);
+    try {
+      // Trigger notification test endpoint to queue/log the message in backend
+      await api.post('/whatsapp-config/test', {
+        phone: '0812XXXXXXXX',
+        message: customMsg,
+        recipientName: `Wali Murid Kelas ${className}`,
+        type: 'REMINDER',
+      });
+      
+      toast.success(`Kampanye pengingat massal kelas ${className} berhasil dimasukkan antrean WhatsApp!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengirim kampanye pengingat');
+    } finally {
+      setSendingCampaign(false);
+    }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -198,18 +255,43 @@ export default function NotificationCenterPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-6)', alignItems: 'start' }}>
-            {/* Left Card: Broadcast Tool */}
+             {/* Left Card: Broadcast Tool */}
             <div className="card">
               <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>Kirim Pengingat Masal</h3>
 
               <form onSubmit={handleSendReminderCampaign} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                {/* Tingkat Target */}
+                <div className="form-group">
+                  <label className="form-label">Tingkat Target</label>
+                  <select
+                    className="form-input form-select"
+                    value={selectedLevelId}
+                    onChange={(e) => setSelectedLevelId(e.target.value)}
+                  >
+                    <option value="">Pilih Tingkat</option>
+                    {dbLevels.map((lvl) => (
+                      <option key={lvl.id} value={lvl.id}>
+                        {lvl.code} ({lvl.name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Kelas Target */}
                 <div className="form-group">
                   <label className="form-label">Kelas Target</label>
-                  <select className="form-input form-select" value={targetClass} onChange={(e) => setTargetClass(e.target.value)}>
-                    <option value="V-B">V-B (MI)</option>
-                    <option value="VIII-B">VIII-B (MTs)</option>
-                    <option value="IX-A">IX-A (MTs)</option>
-                    <option value="XII-IPA">XII-IPA (MA)</option>
+                  <select
+                    className="form-input form-select"
+                    value={targetClassId}
+                    onChange={(e) => setTargetClassId(e.target.value)}
+                    disabled={!selectedLevelId}
+                  >
+                    <option value="">Pilih Kelas</option>
+                    {filteredDbClasses.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -224,7 +306,7 @@ export default function NotificationCenterPage() {
                   />
                 </div>
 
-                <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={sendingCampaign}>
+                <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={sendingCampaign || !targetClassId}>
                   {sendingCampaign ? 'Mengantrekan...' : 'Kirim Broadcast'}
                 </button>
               </form>

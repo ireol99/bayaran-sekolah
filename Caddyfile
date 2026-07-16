@@ -1,6 +1,5 @@
-# Ganti 'domain-anda.com' dengan nama domain publik Anda
-# Contoh: bayaran.sekolah.sch.id
-domain-anda.com {
+# Konfigurasi Caddy untuk local testing
+localhost {
     # Rute ke API Backend
     handle /api/* {
         reverse_proxy backend:3000

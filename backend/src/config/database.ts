@@ -11,7 +11,7 @@ import * as schema from '../db/schema';
  * Sangat aman untuk lingkungan local maupun server produksi (Ubuntu).
  */
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:adminDb@localhost:5433/bayaran_madrasah';
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:adminDb@localhost:5432/bayaran_madrasah';
 
 // 1. Inisialisasi Driver Postgres (postgres.js)
 // max: 10 menentukan jumlah maksimal koneksi paralel dalam pool

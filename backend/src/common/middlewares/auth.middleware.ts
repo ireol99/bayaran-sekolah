@@ -28,6 +28,7 @@ export const authPlugin = new Elysia({ name: 'auth-plugin' })
     jwt({
       name: 'jwt',
       secret: process.env.JWT_SECRET || 'super-secret-key-madrasah-2026-bun',
+      exp: '7d',
     })
   )
   .derive({ as: 'global' }, ({ jwt, headers }) => {

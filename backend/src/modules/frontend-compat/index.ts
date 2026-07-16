@@ -11,6 +11,13 @@ import {
 import { eq, like, or, isNull, desc, inArray, and } from 'drizzle-orm';
 import { authPlugin } from '../../common/middlewares/auth.middleware';
 
+const simulatedLogs: any[] = [
+  { id: 'n1', recipientName: 'Wali Ahmad Fauzi', phone: '081234567890', type: 'RECEIPT', message: 'Yth. Wali Murid, pembayaran SPP Juli 2025 siswa Ahmad Fauzi sebesar Rp 100.000 dinyatakan LUNAS. Terima kasih.', status: 'SENT', createdAt: '2026-07-02 09:16' },
+  { id: 'n2', recipientName: 'Wali Siti Aminah', phone: '081234567891', type: 'BILL_ISSUE', message: 'Yth. Wali Murid, tagihan baru SPP Juli 2025 siswa Siti Aminah sebesar Rp 50.000 telah diterbitkan.', status: 'SENT', createdAt: '2026-07-01 08:05' },
+  { id: 'n3', recipientName: 'Wali Muhammad Rizky', phone: '081234567892', type: 'RECEIPT', message: 'Yth. Wali Murid, pembayaran SPP Juli 2025 siswa Muhammad Rizky sebesar Rp 40.000 berhasil diterima.', status: 'SENT', createdAt: '2026-07-03 14:21' },
+  { id: 'n4', recipientName: 'Wali Zahra Salsabila', phone: '081234567893', type: 'REMINDER', message: 'Yth. Wali Murid, mohon segera menyelesaikan tunggakan SPP Juli siswa Zahra Salsabila sebesar Rp 200.000.', status: 'FAILED', createdAt: '2026-07-03 18:00' },
+];
+
 function formatLocalISO(d?: Date | null): string {
   if (!d) return '';
   const date = new Date(d);
@@ -1345,10 +1352,29 @@ export const frontendCompatModule = new Elysia({ prefix: '/api' })
   })
 
   .post('/whatsapp-config/test', async ({ body }) => {
-    const { phone } = (body as any) || {};
+    const { phone, message, recipientName, type } = (body as any) || {};
+    const newLog = {
+      id: `n_${Date.now()}`,
+      recipientName: recipientName || 'Wali Murid',
+      phone: phone || '0812XXXXXXXX',
+      type: type || 'REMINDER',
+      message: message || '',
+      status: 'SENT',
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+    };
+    
+    simulatedLogs.unshift(newLog);
+    
     return {
       success: true,
       message: `Pesan uji coba WhatsApp berhasil dikirim ke ${phone || 'nomor tujuan'}`,
+    };
+  })
+
+  .get('/whatsapp-logs', async () => {
+    return {
+      success: true,
+      data: simulatedLogs,
     };
   })
 

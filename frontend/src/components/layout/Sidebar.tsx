@@ -1,8 +1,4 @@
-/**
- * Sidebar Navigation
- * Collapsible sidebar with RBAC-filtered menu items
- */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
 import { NAV_ITEMS, APP_NAME, type NavItem } from '../../lib/constants';
@@ -16,11 +12,23 @@ function getIcon(iconName: string, size = 20) {
   return Icon ? <Icon size={size} /> : null;
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, rolePermissions } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Auto-close sidebar on route change for mobile screens
+  useEffect(() => {
+    if (isOpen && onClose) {
+      onClose();
+    }
+  }, [location.pathname]);
 
   // Helper to check if a menu ID is allowed for the user
   const isAllowed = (menuId: string, defaultRoles: string[]) => {
@@ -67,7 +75,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className={cn('sidebar', collapsed && 'sidebar-collapsed')}>
+    <aside className={cn('sidebar', collapsed && 'sidebar-collapsed', isOpen && 'sidebar-open')}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
@@ -84,6 +92,13 @@ export default function Sidebar() {
           </svg>
         </div>
         {!collapsed && <span className="sidebar-logo-text">{APP_NAME}</span>}
+        
+        {/* Mobile Close Button */}
+        {onClose && (
+          <button className="sidebar-mobile-close" onClick={onClose} title="Tutup">
+            <Icons.X size={20} />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}

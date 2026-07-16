@@ -18,13 +18,13 @@ import { formatRupiah } from '../../../lib/utils';
 import { toast } from 'sonner';
 import * as Icons from 'lucide-react';
 
-// Form validation schema
+// Form validation schema referencing DB levelId and classId
 const studentSchema = z.object({
   nis: z.string().min(3, 'NIS minimal 3 karakter').max(12, 'NIS maksimal 12 karakter'),
   nisn: z.string().optional(),
   name: z.string().min(3, 'Nama minimal 3 karakter'),
-  level: z.enum(['MI', 'MTS', 'MA']),
-  className: z.string().min(1, 'Kelas harus dipilih'),
+  levelId: z.string().min(1, 'Tingkat sekolah harus dipilih'),
+  classId: z.string().min(1, 'Kelas harus dipilih'),
   discountCategory: z.string().min(1, 'Kategori diskon harus dipilih'),
   parentPhone: z.string().min(10, 'Nomor HP minimal 10 digit').regex(/^[0-9]+$/, 'Nomor HP hanya berupa angka'),
   status: z.enum(['ACTIVE', 'INACTIVE']),
@@ -32,19 +32,12 @@ const studentSchema = z.object({
 
 type StudentFormValues = z.infer<typeof studentSchema>;
 
-// Default fallback class list per level
-const MOCK_CLASSES: Record<'MI' | 'MTS' | 'MA', string[]> = {
-  MI: ['I-A', 'I-B', 'II-A', 'II-B', 'III-A', 'III-B', 'IV-A', 'IV-B', 'V-A', 'V-B', 'VI-A', 'VI-B'],
-  MTS: ['VII-A', 'VII-B', 'VII-C', 'VIII-A', 'VIII-B', 'VIII-C', 'IX-A', 'IX-B', 'IX-C'],
-  MA: ['X-IPA', 'X-IPS', 'XI-IPA', 'XI-IPS', 'XII-IPA', 'XII-IPS'],
-};
-
 export default function StudentFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEditMode = !!id;
 
-  const [loading, setLoading] = useState(isEditMode);
+  const [loading, setLoading] = useState(true);
   
   // Real Database reference states
   const [dbLevels, setDbLevels] = useState<LevelItem[]>([]);
@@ -63,19 +56,19 @@ export default function StudentFormPage() {
       nis: '',
       nisn: '',
       name: '',
-      level: 'MI',
-      className: '',
+      levelId: '',
+      classId: '',
       discountCategory: 'Umum',
       parentPhone: '',
       status: 'ACTIVE',
     },
   });
 
-  const selectedLevel = watch('level');
+  const selectedLevelId = watch('levelId');
 
-  // Load real reference data (Levels, Classes, Discount Categories) from Database
+  // Load real reference data and student details for edit mode sequentially
   useEffect(() => {
-    const fetchReferenceData = async () => {
+    const initData = async () => {
       try {
         const [levelsData, classesData, discountsData] = await Promise.all([
           studentService.getLevels(),
@@ -85,49 +78,39 @@ export default function StudentFormPage() {
         setDbLevels(levelsData);
         setDbClasses(classesData);
         setDiscountCategories(discountsData);
-      } catch (err) {
-        console.error('Gagal mengambil data referensi dari database:', err);
-      }
-    };
-    fetchReferenceData();
-  }, []);
 
-  // Filter classes according to selected level from DB, with fallback to defaults
-  const matchedLevelObj = dbLevels.find((l) => l.code === selectedLevel);
-  const filteredDbClasses = matchedLevelObj
-    ? dbClasses.filter((c) => c.levelId === matchedLevelObj.id).map((c) => c.name)
-    : [];
-
-  const availableClassNames =
-    filteredDbClasses.length > 0 ? filteredDbClasses : MOCK_CLASSES[selectedLevel] || [];
-
-  // Load student details for edit mode
-  useEffect(() => {
-    if (isEditMode && id) {
-      const fetchStudent = async () => {
-        try {
+        if (isEditMode && id) {
           const student = await studentService.getById(id);
           setValue('nis', student.nis);
           setValue('nisn', student.nisn || '');
           setValue('name', student.name);
-          setValue('level', student.level);
           setValue('parentPhone', student.parentPhone);
           setValue('discountCategory', student.discountCategory || 'Umum');
           setValue('status', student.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE');
-          // Set timeout so selectedLevel updates first
-          setTimeout(() => {
-            setValue('className', student.className);
-          }, 0);
-        } catch {
-          toast.error('Gagal mengambil data siswa');
-          navigate('/students');
-        } finally {
-          setLoading(false);
+          
+          // Map backend 'level' code (e.g. 'MI') to level ID
+          const matchedLvl = levelsData.find((l) => l.code === student.level);
+          if (matchedLvl) {
+            setValue('levelId', matchedLvl.id);
+          }
+          
+          // Use classId directly
+          setValue('classId', student.classId || '');
         }
-      };
-      fetchStudent();
-    }
-  }, [id, isEditMode, setValue, navigate]);
+      } catch (err) {
+        console.error('Gagal mengambil data referensi dari database:', err);
+        toast.error('Gagal memuat data referensi');
+      } finally {
+        setLoading(false);
+      }
+    };
+    initData();
+  }, [id, isEditMode, setValue]);
+
+  // Filter classes according to selected level from DB
+  const filteredDbClasses = selectedLevelId
+    ? dbClasses.filter((c) => c.levelId === selectedLevelId)
+    : [];
 
   const onSubmit = async (values: StudentFormValues) => {
     try {
@@ -135,8 +118,23 @@ export default function StudentFormPage() {
       const matchedDisc = discountCategories.find((d) => d.name === values.discountCategory);
       const discountAmount = matchedDisc ? Number(matchedDisc.amount) : 0;
 
+      // Extract original level code and class name to maintain backwards compatibility
+      const matchedLvlObj = dbLevels.find((l) => l.id === values.levelId);
+      const level = matchedLvlObj ? (matchedLvlObj.code as 'MI' | 'MTS' | 'MA') : 'MI';
+
+      const matchedClassObj = dbClasses.find((c) => c.id === values.classId);
+      const className = matchedClassObj ? matchedClassObj.name : '';
+
       const payload = {
-        ...values,
+        nis: values.nis,
+        nisn: values.nisn,
+        name: values.name,
+        level,
+        className,
+        classId: values.classId,
+        discountCategory: values.discountCategory,
+        parentPhone: values.parentPhone,
+        status: values.status,
         discountAmount,
       };
 
@@ -233,23 +231,17 @@ export default function StudentFormPage() {
               </label>
               <select
                 id="student-level"
-                className="form-input form-select"
-                {...register('level')}
+                className={`form-input form-select ${errors.levelId ? 'error' : ''}`}
+                {...register('levelId')}
               >
-                {dbLevels.length > 0 ? (
-                  dbLevels.map((lvl) => (
-                    <option key={lvl.id} value={lvl.code}>
-                      {lvl.code} ({lvl.name})
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="MI">MI (Madrasah Ibtidaiyah)</option>
-                    <option value="MTS">MTs (Madrasah Tsanawiyah)</option>
-                    <option value="MA">MA (Madrasah Aliyah)</option>
-                  </>
-                )}
+                <option value="">Pilih Tingkat</option>
+                {dbLevels.map((lvl) => (
+                  <option key={lvl.id} value={lvl.id}>
+                    {lvl.code} ({lvl.name})
+                  </option>
+                ))}
               </select>
+              {errors.levelId && <span className="form-error">{errors.levelId.message}</span>}
             </div>
 
             {/* Kelas (Database classes) */}
@@ -259,17 +251,17 @@ export default function StudentFormPage() {
               </label>
               <select
                 id="student-class"
-                className={`form-input form-select ${errors.className ? 'error' : ''}`}
-                {...register('className')}
+                className={`form-input form-select ${errors.classId ? 'error' : ''}`}
+                {...register('classId')}
               >
                 <option value="">Pilih Kelas</option>
-                {availableClassNames.map((clsName) => (
-                  <option key={clsName} value={clsName}>
-                    {clsName}
+                {filteredDbClasses.map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name}
                   </option>
                 ))}
               </select>
-              {errors.className && <span className="form-error">{errors.className.message}</span>}
+              {errors.classId && <span className="form-error">{errors.classId.message}</span>}
             </div>
           </div>
 
