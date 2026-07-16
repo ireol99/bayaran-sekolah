@@ -9,6 +9,7 @@ import {
   feeTemplatesTable,
   paymentMethodsTable,
   expenseCategoriesTable,
+  settingsTable,
 } from './schema';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
@@ -194,6 +195,26 @@ async function main() {
       category: 'SPP',
     });
     console.log('✅ Default Fee Template created (SPP MI Rp 200.000)');
+  }
+
+  // 9. Seed Settings Profile
+  const [profileSettings] = await db.select().from(settingsTable).where(eq(settingsTable.id, 'PROFILE')).limit(1);
+  if (!profileSettings) {
+    await db.insert(settingsTable).values({
+      id: 'PROFILE',
+      schoolName: 'Yayasan Pendidikan Islam Madrasah Terpadu',
+      miName: 'Madrasah Ibtidaiyah (MI) Terpadu',
+      mtsName: 'Madrasah Tsanawiyah (MTs) Terpadu',
+      maName: 'Madrasah Aliyah (MA) Terpadu',
+      address: 'Jl. Pendidikan Islam No. 45, Kecamatan Sukamaju, Kota Bandung',
+      phone: '022-7654321',
+      email: 'info@madrasah-terpadu.sch.id',
+      receiptFooter: 'Terima kasih atas pembayaran Anda. Semoga berkah.',
+      useLetterhead: false,
+      whatsappConfig: '{}',
+      rolePermissions: '{}',
+    });
+    console.log('✅ Settings Profile created');
   }
 
   console.log('🎉 Seeding completed successfully!');
